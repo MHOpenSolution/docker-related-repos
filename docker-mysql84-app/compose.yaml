@@ -1,0 +1,80 @@
+
+services:
+  # MySQL 8.4 Database Service
+  mysql:
+    image: mysql:8.4
+    container_name: mysql_server
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootSecurePass123!
+      MYSQL_DATABASE: myapp_db
+      MYSQL_USER: webapp_user
+      MYSQL_PASSWORD: webappSecurePass123!
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./mysql_data:/var/lib/mysql
+        #   - ./mysql/my.cnf:/etc/mysql/conf.d/custom.cnf:ro
+      - ./backups:/backups
+      - ./logs/mysql:/var/log/mysql
+    networks:
+      - lamp_network
+        #command: --default-authentication-plugin=caching_sha2_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootSecurePass123!"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PHP 8 Apache Web Service
+  web:
+    build:
+      context: ./php
+      dockerfile: Dockerfile
+    container_name: php_apache_server
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./www:/var/www/html
+      - ./php/php.ini:/usr/local/etc/php/php.ini:ro
+      - ./logs/apache:/var/log/apache2
+    networks:
+      - lamp_network
+    #depends_on:
+    #  mysql:
+    #    condition: service_healthy
+    depends_on:
+      - mysql
+    environment:
+      - DB_HOST=mysql
+      - DB_NAME=myapp_db
+      - DB_USER=webapp_user
+      - DB_PASSWORD=webappSecurePass123!
+
+  # PhpMyAdmin (Optional - for database management)
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: phpmyadmin
+    restart: always
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: rootSecurePass123!
+      UPLOAD_LIMIT: 100M
+    networks:
+      - lamp_network
+    depends_on:
+      - mysql
+
+networks:
+  lamp_network:
+    driver: bridge
+
+#volumes:
+#  mysql_data:
+#    driver: local
