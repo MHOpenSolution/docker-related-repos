@@ -1,0 +1,8 @@
+
+logs/
+backups/
+.env
+mysql_data/
+# Temp files
+*.log
+*.tmp
